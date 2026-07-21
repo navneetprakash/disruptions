@@ -700,8 +700,6 @@
         const raisedDate = item[FIELDS.dateRaised];
         const updatedDate = item[FIELDS.dateUpdated];
 
-        //if ((fromDateValue || toDateValue) && !rawDate) return false;
-
         if (fromDateValue) {
 
           if (!raisedDate) return false;
@@ -735,18 +733,10 @@
       });
 
       filteredData.sort((a, b) => {
-
-        const aDate = Date.parse(
-          a["Date Incident Raised"] || ""
-        ) || 0;
-
-        const bDate = Date.parse(
-          b["Date Incident Raised"] || ""
-        ) || 0;
-
-        return bDate - aDate;
-
-      });
+  const aDate = Date.parse(a[FIELDS.dateRaised] || "") || 0;
+  const bDate = Date.parse(b[FIELDS.dateRaised] || "") || 0;
+  return bDate - aDate;
+});
 
       updateCards(filteredData);
       renderTable(filteredData);

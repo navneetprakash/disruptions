@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en-NZ">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AT Unplanned Disruption Dashboard</title>
+
+    <style>
+        body {
+            font-family: Segoe UI, Arial, sans-serif;
+            background: #f3f5f8;
+            margin: 0;
+        }
+
+        header {
+            background: #0055a6;
+            color: white;
+            padding: 20px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
+        }
+
+        .card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .table-wrap {
+            padding: 20px;
+        }
+
+        .incident-section {
+            padding: 20px;
+        }
+
+        .incident-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 15px;
+        }
+
+        .incident-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, .1);
+            border-left: 5px solid #0055a6;
+        }
+
+        .incident-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .incident-meta {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .incident-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background: #d32f2f;
+        }
+
+        .status-ongoing {
+            background: #ff9800;
+        }
+
+        .status-resolved {
+            background: #43a047;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th {
+            background: #0055a6;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f5f8ff;
+            cursor: pointer;
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .Bus {
+            background: #36a852;
+        }
+
+        .Ferry {
+            background: #1e90ff;
+        }
+
+        .Train {
+            background: #ff9800;
+        }
+
+        .Other {
+            background: #7c8797;
+        }
+
+        input {
+            padding: 10px;
+            width: 300px;
+        }
+
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, .5);
+        }
+
+        .modal-content {
+            background: white;
+            width: 80%;
+            margin: 40px auto;
+            padding: 20px;
+            max-height: 85vh;
+            overflow: auto;
+        }
+
+        pre {
+            white-space: pre-wrap;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <header>
+        <h1>AT Unplanned Disruption Dashboard</h1>
+        <div id="status">Loading...</div>
+    </header>
+
+    <div style="padding:20px;display:flex;gap:10px;">
+
+        <input id="search" placeholder="Search...">
+        <select id="modeFilter">
+            <option value="">All Modes</option>
+        </select>
+
+        <select id="statusFilter">
+            <option value="">All Statuses</option>
+        </select>
+
+    </div>
+
+    <div class="cards">
+
+        <div class="card">
+            <div>Total</div>
+            <div class="value" id="totalCount">0</div>
+        </div>
+
+        <div class="card">
+            <div>Active</div>
+            <div class="value" id="activeCount">0</div>
+        </div>
+
+        <div class="card">
+            <div>Bus</div>
+            <div class="value" id="busCount">0</div>
+        </div>
+
+        <div class="card">
+            <div>Ferry</div>
+            <div class="value" id="ferryCount">0</div>
+        </div>
+
+    </div>
+
+    <div id="recordCount" style="
+padding:0 20px 15px 20px;
+font-weight:bold;
+color:#555;
+">
+        Showing 0 records
+    </div>
+
+    <div class="incident-section">
+
+        <div class="section-title">
+            Current Network Monitoring
+        </div>
+
+        <div id="incidentCards" class="incident-grid">
+        </div>
+
+    </div>
+
+    <div class="table-wrap">
+
+        <table>
+
+            <thead>
+
+                <tr>
+                    <th>Reference</th>
+                    <th>Title</th>
+                    <th>Mode</th>
+                    <th>Status</th>
+                    <th>Owner</th>
+                    <th>Date</th>
+                </tr>
+
+            </thead>
+
+            <tbody id="tableBody">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <div id="modal">
+
+        <div class="modal-content">
+
+            <h2 id="detailTitle"></h2>
+
+            <h3>Reference</h3>
+            <pre id="detailReference"></pre>
+
+            <h3>Alert</h3>
+            <pre id="detailAlert"></pre>
+
+            <h3>Details</h3>
+            <pre id="detailDetails"></pre>
+
+            <h3>Targeting</h3>
+            <pre id="detailTargeting"></pre>
+
+            <button onclick="closeModal()">Close</button>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        const API_URL =
+            "https://3612a5d96607ef34a510a8dbee05c8.c3.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/15/workflows/20b3b4639885483a8c75c3b7c350913a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=p2Aon6Lzbu9XXiWw9-QZTcSwiHnSOx2NCVnbF6gTvMo";
+
+        const API_KEY =
+            "8jK92nPqX4mR7zLb5TsA";
+
+        const FIELDS = {
+
+            reference: "Disruption Data",
+            title: "Disruption Title",
+            mode: "Mode",
+            status: "Status",
+            details: "Disruption Details (DoO Email ) ",
+            alert: "UP Service alert - Push Notification content",
+            targeting: "Targeting",
+            owner: "Name",
+            date: "Advisory Date"
+
+        };
+
+        let allData = [];
+
+        function populateFilters() {
+
+            // Modes
+
+            const modes = [...new Set(
+                allData
+                    .map(x => x[FIELDS.mode])
+                    .filter(Boolean)
+            )];
+
+            const modeSelect =
+                document.getElementById("modeFilter");
+
+            modeSelect.innerHTML =
+                '<option value="">All Modes</option>';
+
+            modes.sort().forEach(mode => {
+
+                const option =
+                    document.createElement("option");
+
+                option.value = mode;
+                option.textContent = mode;
+
+                modeSelect.appendChild(option);
+
+            });
+
+            // Statuses
+
+            const statuses = [...new Set(
+                allData
+                    .map(x => x[FIELDS.status])
+                    .filter(Boolean)
+            )];
+
+            const statusSelect =
+                document.getElementById("statusFilter");
+
+            statusSelect.innerHTML =
+                '<option value="">All Statuses</option>';
+
+            statuses.sort().forEach(status => {
+
+                const option =
+                    document.createElement("option");
+
+                option.value = status;
+                option.textContent = status;
+
+                statusSelect.appendChild(option);
+
+            });
+
+        }
+
+        async function loadData() {
+
+            try {
+
+                const response = await fetch(API_URL, {
+                    method: "GET",
+                    headers: {
+                        "x-api-key": API_KEY
+                    }
+                });
+
+                const data = await response.json();
+
+                allData =
+                    Array.isArray(data)
+                        ? data
+                        : data.value || [];
+
+                populateFilters();
+                render();
+
+                document.getElementById("status").innerHTML =
+                    "Loaded " + allData.length + " records";
+
+            }
+            catch (err) {
+
+                console.error(err);
+
+                document.getElementById("status").innerHTML =
+                    "Load Failed";
+
+            }
+
+        }
+
+        function render() {
+
+            const search =
+                document.getElementById("search")
+                    .value
+                    .toLowerCase();
+
+            const selectedMode =
+                document.getElementById("modeFilter").value;
+
+            const selectedStatus =
+                document.getElementById("statusFilter").value;
+
+            const filtered =
+                allData.filter(x => {
+
+                    const text =
+                        JSON.stringify(x).toLowerCase();
+
+                    const matchesSearch =
+                        text.includes(search);
+
+                    const matchesMode =
+                        !selectedMode ||
+                        x[FIELDS.mode] === selectedMode;
+
+                    const matchesStatus =
+                        !selectedStatus ||
+                        x[FIELDS.status] === selectedStatus;
+
+                    return matchesSearch &&
+                        matchesMode &&
+                        matchesStatus;
+
+                });
+
+            filtered.sort((a, b) => {
+
+                const aDate =
+                    Date.parse(a[FIELDS.date] || "") || 0;
+
+                const bDate =
+                    Date.parse(b[FIELDS.date] || "") || 0;
+
+                return bDate - aDate;
+
+            });
+
+            const sevenDaysAgo = new Date();
+
+            sevenDaysAgo.setDate(
+                sevenDaysAgo.getDate() - 7
+            );
+
+            const recentOnly =
+                filtered.filter(item => {
+
+                    const date =
+                        new Date(
+                            item[FIELDS.date]
+                        );
+
+                    return (
+                        !isNaN(date) &&
+                        date >= sevenDaysAgo
+                    );
+
+                });
+
+            document.getElementById("totalCount").innerText =
+                filtered.length;
+
+            document.getElementById("activeCount").innerText =
+                filtered.filter(x =>
+                    (x[FIELDS.status] || "")
+                        .toLowerCase()
+                        .includes("active")
+                ).length;
+
+            document.getElementById("busCount").innerText =
+                filtered.filter(x =>
+                    x[FIELDS.mode] === "Bus"
+                ).length;
+
+            document.getElementById("ferryCount").innerText =
+                filtered.filter(x =>
+                    x[FIELDS.mode] === "Ferry"
+                ).length;
+
+            renderIncidentCards();
+            renderTable(recentOnly);
+
+            document.getElementById("recordCount")
+                .innerHTML =
+                "Showing " +
+                recentOnly.length +
+                " records from the last 7 days";
+
+        }
+
+        function renderIncidentCards() {
+
+            const container =
+                document.getElementById(
+                    "incidentCards"
+                );
+
+            container.innerHTML = "";
+
+            const currentIncidents =
+                allData.filter(item => {
+
+                    const status =
+                        (
+                            item[FIELDS.status] || ""
+                        ).toLowerCase();
+
+                    return (
+                        status.includes("active") ||
+                        status.includes("ongoing")
+                    );
+
+                });
+
+            if (currentIncidents.length === 0) {
+
+                container.innerHTML =
+
+                    `
+        <div class="incident-card">
+
+        <div class="incident-title">
+
+        No Active Incidents Today
+
+        </div>
+
+        </div>
+        `;
+
+                return;
+            }
+
+            currentIncidents
+                .slice(0, 12)
+                .forEach(item => {
+
+                    const status =
+                        item[FIELDS.status] || "";
+
+                    let statusClass =
+                        "status-active";
+
+                    if (
+                        status.toLowerCase()
+                            .includes("ongoing")
+                    ) {
+                        statusClass =
+                            "status-ongoing";
+                    }
+
+                    const card =
+                        document.createElement("div");
+
+                    card.className =
+                        "incident-card";
+
+                    card.innerHTML =
+
+                        `
+        <div class="incident-title">
+            ${item[FIELDS.title] || ""}
+        </div>
+
+        <div class="incident-meta">
+            ${item[FIELDS.mode] || ""}
+        </div>
+
+        <div class="incident-meta">
+            Owner:
+            ${item[FIELDS.owner] || ""}
+        </div>
+
+        <div class="incident-meta">
+            ${formatDate(
+                            item[FIELDS.date]
+                        )}
+        </div>
+
+        <span class="incident-status ${statusClass}">
+            ${status || "Active"}
+        </span>
+        `;
+
+                    card.onclick =
+                        () => showDetails(item);
+
+                    container.appendChild(card);
+
+                });
+
+        }
+
+        function renderTable(rows) {
+
+            const tbody =
+                document.getElementById("tableBody");
+
+            tbody.innerHTML = "";
+
+            rows.forEach(item => {
+
+                const row =
+                    document.createElement("tr");
+
+                const mode =
+                    item[FIELDS.mode] || "";
+
+                let modeClass = "Other";
+
+                if (mode === "Bus") modeClass = "Bus";
+                if (mode === "Ferry") modeClass = "Ferry";
+                if (mode === "Train") modeClass = "Train";
+
+                row.innerHTML = `
+<td>${item[FIELDS.reference] || ""}</td>
+
+<td>${item[FIELDS.title] || ""}</td>
+
+<td>
+<span class="pill ${modeClass}">
+${mode}
+</span>
+</td>
+
+<td>${item[FIELDS.status] || ""}</td>
+
+<td>${item[FIELDS.owner] || ""}</td>
+
+<td>${formatDate(item[FIELDS.date])}</td>
+`;
+
+                row.onclick = () => showDetails(item);
+
+                tbody.appendChild(row);
+
+            });
+
+        }
+
+        function showDetails(item) {
+
+            document.getElementById("detailTitle")
+                .innerText =
+                item[FIELDS.title] || "";
+
+            document.getElementById("detailReference")
+                .innerText =
+                item[FIELDS.reference] || "";
+
+            document.getElementById("detailAlert")
+                .innerText =
+                item[FIELDS.alert] || "";
+
+            document.getElementById("detailDetails")
+                .innerText =
+                item[FIELDS.details] || "";
+
+            document.getElementById("detailTargeting")
+                .innerText =
+                item[FIELDS.targeting] || "";
+
+            document.getElementById("modal")
+                .style.display = "block";
+
+        }
+
+        function closeModal() {
+
+            document.getElementById("modal")
+                .style.display = "none";
+
+        }
+
+        function formatDate(value) {
+
+            if (!value) return "";
+
+            const d = new Date(value);
+
+            if (isNaN(d)) return "";
+
+            return d.toLocaleDateString("en-NZ");
+
+        }
+
+        document.getElementById("search")
+            .addEventListener("input", render);
+        document.getElementById("modeFilter")
+            .addEventListener("change", render);
+        document.getElementById("statusFilter")
+            .addEventListener("change", render);
+
+
+        loadData();
+
+        setInterval(loadData, 60000);
+
+    </script>
+
+</body>
+
+</html>
